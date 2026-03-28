@@ -1,0 +1,90 @@
+/* NoteCard.module.css */
+
+.noteCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.noteCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+}
+
+.noteCard:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.shareBtn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shareBtn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.shareBtn:active {
+  transform: translateY(0);
+}
+
+.touchTarget {
+  height: 12px;
+  background: transparent;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .noteCard {
+    margin-bottom: 16px;
+  }
+  
+  .shareBtn {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+}
+
+/* Accessibility improvements */
+.noteCard[aria-selected="true"] {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: -3px;
+}
+
+/* Animation for state changes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.noteCard {
+  animation: fadeIn 0.3s ease-out;
+}

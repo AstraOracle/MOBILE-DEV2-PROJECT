@@ -1,0 +1,263 @@
+/* Home.module.css */
+
+.homePage {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.floatingShareContainer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.floatingShareBtn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 24px;
+  box-shadow: var(--shadow-lg);
+  display: none; /* Hidden by default, shown on mobile */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.floatingShareBtn:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.floatingShareBtn:active {
+  transform: scale(1);
+}
+
+.floatingShareBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Page header styles */
+.display6 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.textMuted {
+  color: var(--text-tertiary) !important;
+  font-size: 1rem;
+}
+
+/* Controls section */
+.btnOutlinePrimary {
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.btnOutlinePrimary:hover {
+  background: var(--accent-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btnPrimary {
+  background-color: var(--accent-primary);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnOutlineSecondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.btnOutlineSecondary:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+.badgeBgSecondary {
+  font-size: 0.75rem;
+  padding: 0.5em 0.75em;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.textMutedSmall {
+  color: var(--text-tertiary) !important;
+  font-size: 0.875rem;
+}
+
+/* Notes grid layout */
+.notesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 20px 0;
+}
+
+/* Empty state styles */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.emptyContent {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+
+.h5 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.emptyDescription {
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .floatingShareBtn {
+    display: block;
+  }
+  
+  .notesGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .display6 {
+    font-size: 2rem;
+  }
+  
+  .emptyState {
+    padding: 3rem 1.5rem;
+  }
+  
+  .emptyIcon {
+    font-size: 3rem;
+  }
+  
+  .h5 {
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .display6 {
+    font-size: 1.75rem;
+  }
+  
+  .emptyState {
+    padding: 2.5rem 1rem;
+  }
+  
+  .emptyIcon {
+    font-size: 2.5rem;
+  }
+}
+
+/* Animation for grid items */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notesGrid > * {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Accessibility improvements */
+.floatingShareBtn:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btnOutlinePrimary:focus-visible,
+.btnPrimary:focus-visible,
+.btnOutlineSecondary:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Loading state */
+.floatingShareBtn:disabled .spinnerBorder {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Touch-friendly enhancements */
+@media (hover: none) and (pointer: coarse) {
+  .btnOutlinePrimary,
+  .btnPrimary,
+  .btnOutlineSecondary {
+    min-height: 44px; /* Minimum touch target size */
+    padding: 12px 16px;
+  }
+  
+  .floatingShareBtn {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+  }
+}
