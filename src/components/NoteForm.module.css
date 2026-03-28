@@ -1,0 +1,110 @@
+/* NoteForm.module.css */
+
+.noteForm {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.formControl {
+  flex: 1;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  min-width: 0; /* Prevents overflow */
+}
+
+.formControl:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background-color: var(--bg-tertiary);
+}
+
+.formControl::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.addButton {
+  background-color: var(--accent-primary);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.addButton:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.addButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.addButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .noteForm {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .formControl {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .addButton {
+    width: 100%;
+    padding: 14px;
+  }
+}
+
+/* Animation for form submission */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.addButton:active {
+  animation: pulse 0.2s ease;
+}
+
+/* Accessibility improvements */
+.formControl:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Error state styling */
+.formControl.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Success state styling */
+.formControl.success {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}

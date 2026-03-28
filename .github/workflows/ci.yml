@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  client:
+    name: Client: lint & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install client deps
+        working-directory: ./duly-noted
+        run: npm ci
+      - name: Run ESLint
+        working-directory: ./duly-noted
+        run: npm run lint
+      - name: Run tests
+        working-directory: ./duly-noted
+        run: npm test -- --watchAll=false --runInBand
+
+  server:
+    name: Server: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install server deps
+        working-directory: ./duly-noted/server
+        run: npm ci
