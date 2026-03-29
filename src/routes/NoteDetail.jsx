@@ -22,9 +22,7 @@ export default function NoteDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const isNew = id === 'new' || !id;
-    
-    console.log('NoteDetail rendered:', { id, isNew, params: useParams() });
-    
+
     const { state, addNote, updateNote, deleteNote, shareNote, archiveNote } = useContext(NotesContext);
     const { t } = useI18n();
     const [noteText, setNoteText] = useState('');
@@ -36,17 +34,11 @@ export default function NoteDetail() {
 
     // Load note text when editing existing note
     useEffect(() => {
-        console.log('NoteDetail useEffect:', { isNew, currentNote, id });
-        
         if (!isNew && currentNote) {
             setNoteText(currentNote.text);
-            console.log('Loaded existing note:', currentNote);
         } else if (isNew) {
             setNoteText('');
-            console.log('Creating new note');
         } else {
-            // Note not found - redirect to notes list
-            console.log('Note not found, redirecting to /notes');
             navigate('/notes');
         }
     }, [isNew, currentNote, id, navigate]);
@@ -56,7 +48,7 @@ export default function NoteDetail() {
      */
     const handleSave = async () => {
         if (!noteText.trim()) {
-            alert('Please enter note text');
+            alert(t('pleaseEnterNoteText'));
             return;
         }
 
@@ -70,7 +62,7 @@ export default function NoteDetail() {
             } else {
                 // Check if currentNote exists before trying to update
                 if (!currentNote) {
-                    alert('Note not found');
+                    alert(t('noteNotFound'));
                     navigate('/notes');
                     return;
                 }
@@ -79,7 +71,7 @@ export default function NoteDetail() {
             }
         } catch (error) {
             console.error('Save failed:', error);
-            alert('Save failed');
+            alert(t('saveFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -90,7 +82,7 @@ export default function NoteDetail() {
      */
     const handleDelete = async () => {
         if (!isNew && currentNote) {
-            const confirmed = window.confirm('Are you sure you want to delete this note?');
+            const confirmed = window.confirm(t('confirmDeleteNote'));
             if (confirmed) {
                 setIsDeleting(true);
                 try {
@@ -98,7 +90,7 @@ export default function NoteDetail() {
                     navigate('/notes');
                 } catch (error) {
                     console.error('Delete failed:', error);
-                    alert('Delete failed');
+                    alert(t('deleteFailed'));
                 } finally {
                     setIsDeleting(false);
                 }
@@ -113,7 +105,7 @@ export default function NoteDetail() {
         const textToShare = noteText.trim();
         
         if (!textToShare) {
-            alert('Cannot share empty note');
+            alert(t('cannotShareEmptyNote'));
             return;
         }
 
@@ -130,7 +122,7 @@ export default function NoteDetail() {
             shareNote(noteToShare);
         } catch (error) {
             console.error('Share failed:', error);
-            alert('Share failed. Please try again.');
+            alert(t('shareFailed'));
         }
     };
 
@@ -139,7 +131,7 @@ export default function NoteDetail() {
      */
     const handleCancel = () => {
         if (!isNew && currentNote && noteText !== currentNote.text) {
-            const confirmed = window.confirm('Discard changes?');
+            const confirmed = window.confirm(t('discardChanges'));
             if (confirmed) {
                 navigate('/notes');
             }
@@ -158,7 +150,7 @@ export default function NoteDetail() {
                 navigate('/notes');
             } catch (error) {
                 console.error('Archive failed:', error);
-                alert('Archive failed');
+                alert(t('archiveFailed'));
             }
         }
     };

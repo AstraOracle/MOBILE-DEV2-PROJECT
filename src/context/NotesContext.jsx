@@ -1,5 +1,5 @@
 import React, { createContext, useReducer, useEffect, useCallback } from 'react';
-import { getAllNotes, setNotes, getQueue, setQueue, clearQueue, getKV } from '../lib/idb';
+import { getAllNotes, setNotes, getQueue, setQueue, clearQueue } from '../lib/idb';
 
 export const NotesContext = createContext();
 
@@ -39,6 +39,18 @@ function reducer(state, action) {
 
 export function NotesProvider({ children }) {
     const [state, dispatch] = useReducer(reducer, initialState);
+
+    const queueOfflineAction = useCallback(async (action) => {
+        const nextQueue = [
+            ...state.queue,
+            {
+                ...action,
+                queuedAt: new Date().toISOString(),
+            },
+        ];
+        await setQueue(nextQueue);
+        dispatch({ type: "SET_QUEUE", payload: nextQueue });
+    }, [state.queue]);
 
     // Load notes from IndexedDB
     useEffect(() => {
@@ -95,13 +107,6 @@ export function NotesProvider({ children }) {
         dispatch({ type: "SET_SYNC_STATUS", payload: 'syncing' });
         
         try {
-            // Get token for sync
-            const token = await getKV('token');
-            if (!token) {
-                dispatch({ type: "SET_SYNC_STATUS", payload: 'error' });
-                return;
-            }
-
             // Get pending actions from queue
             const queue = await getQueue();
             
@@ -110,11 +115,9 @@ export function NotesProvider({ children }) {
                 return;
             }
 
-            // Process queue items
+            // Simulate processing queued offline actions.
             for (const item of queue) {
                 try {
-                    // This would normally sync with a backend API
-                    // For now, we'll just clear the queue to simulate sync
                     console.log('Syncing item:', item);
                 } catch (err) {
                     console.error('Sync failed for item:', item, err);
@@ -132,6 +135,17 @@ export function NotesProvider({ children }) {
             dispatch({ type: "SET_SYNC_STATUS", payload: 'error' });
         }
     }, []);
+
+    useEffect(() => {
+        const handleOnline = () => {
+            syncNotes().catch((error) => {
+                console.error('Automatic sync failed:', error);
+            });
+        };
+
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, [syncNotes]);
 
     // Add new note with timestamp
     const addNote = useCallback(async (noteText) => {
@@ -154,6 +168,9 @@ export function NotesProvider({ children }) {
             const currentNotes = await getAllNotes();
             const updatedNotes = [...currentNotes, newNote];
             await setNotes(updatedNotes);
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                await queueOfflineAction({ type: 'ADD_NOTE', payload: newNote });
+            }
             console.log('Note saved to IndexedDB successfully');
             dispatch({ type: "ADD", payload: newNote });
             console.log('Note added to state successfully');
@@ -161,7 +178,7 @@ export function NotesProvider({ children }) {
             console.error('Failed to add note:', err);
             throw new Error('Unable to save note');
         }
-    }, []);
+    }, [queueOfflineAction]);
 
     // Update existing note with timestamp
     const updateNote = useCallback(async (id, updates) => {
@@ -184,24 +201,30 @@ export function NotesProvider({ children }) {
                 n.id === id ? updatedNote : n
             );
             await setNotes(updatedNotes);
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                await queueOfflineAction({ type: 'UPDATE_NOTE', payload: updatedNote });
+            }
             dispatch({ type: "UPDATE", payload: updatedNote });
         } catch (err) {
             console.error('Failed to update note:', err);
             throw new Error('Unable to save note changes');
         }
-    }, [state.notes]);
+    }, [state.notes, queueOfflineAction]);
 
     // Delete note
     const deleteNote = useCallback(async (id) => {
         try {
             const updatedNotes = state.notes.filter(n => n.id !== id);
             await setNotes(updatedNotes);
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                await queueOfflineAction({ type: 'DELETE_NOTE', payload: { id } });
+            }
             dispatch({ type: "DELETE", payload: id });
         } catch (err) {
             console.error('Failed to delete note:', err);
             throw new Error('Unable to delete note');
         }
-    }, [state.notes]);
+    }, [state.notes, queueOfflineAction]);
 
     // Fallback sharing method using clipboard API
     const fallbackShare = useCallback(async (text) => {
@@ -325,16 +348,23 @@ export function NotesProvider({ children }) {
                 n.id === id ? updatedNote : n
             );
             await setNotes(updatedNotes);
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                await queueOfflineAction({ type: 'ARCHIVE_NOTE', payload: updatedNote });
+            }
             dispatch({ type: "UPDATE", payload: updatedNote });
         } catch (err) {
             console.error('Failed to archive note:', err);
             throw new Error('Unable to archive note');
         }
-    }, [state.notes]);
+    }, [state.notes, queueOfflineAction]);
 
     return (
         <NotesContext.Provider value={{ 
             state, 
+            notes: state.notes,
+            queue: state.queue,
+            lastSync: state.lastSync,
+            syncStatus: state.syncStatus,
             dispatch,
             addNote,
             updateNote,

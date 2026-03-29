@@ -21,12 +21,17 @@ export const translations = {
         saveChanges: "Save Changes",
         archiveNote: "Archive Note",
         deleteNote: "Delete Note",
+        creating: "Creating...",
+        pleaseEnterNoteText: "Please enter note text",
+        createNoteFailed: "Unable to create note",
+        discardChanges: "Discard changes?",
         
         // Note actions
         delete: "Delete",
         share: "Share",
         shareAll: "Share All",
         shareAllTitle: "All Notes",
+        sharing: "Sharing...",
         confirmDelete: "Are you sure you want to delete this note?",
         
         // Note states
@@ -54,6 +59,11 @@ export const translations = {
         // About
         aboutTitle: "About Duly Noted",
         aboutDescription: "This App demonstrates advanced React Features",
+        accountInfo: "Account Information",
+        statusLabel: "Status",
+        signedIn: "Signed In",
+        notSignedIn: "Not signed in",
+        accountPrompt: "Go to the Account page to sign in or create an account.",
         
         // Language selector
         language: "Language",
@@ -63,6 +73,15 @@ export const translations = {
         noArchivedNotes: "No archived notes",
         createAndArchiveNotes: "Create and archive notes to see them here.",
         startByCreatingFirstNote: "Start by creating your first note.",
+        createAndOrganizeNotes: "Create and organize your notes in one place.",
+        activeNotesLabel: "Show active notes",
+        archivedNotesLabel: "Show archived notes",
+        showActive: "Show Active",
+        archiveTip: "Tip: Archive notes to keep your active list clean.",
+        createFirstNote: "Create your first note",
+        learnMore: "Learn More",
+        shareAllNotes: "Share all notes",
+        noNotesToShare: "No notes to share. Create some notes first!",
         
         // Date formats
         today: "Today",
@@ -94,9 +113,13 @@ export const translations = {
         logout: "Logout",
         username: "Username",
         password: "Password",
+        signedInAs: "Signed in as",
+        signIn: "Sign in",
+        signOut: "Sign out",
+        haveAccount: "Have an account?",
         confirmPassword: "Confirm Password",
         loginToAccount: "Login to your account",
-        createAccount: "Create an account",
+        createAccount: "Create account",
         alreadyHaveAccount: "Already have an account?",
         dontHaveAccount: "Don't have an account?",
         
@@ -108,6 +131,7 @@ export const translations = {
         passwordsDoNotMatch: "Passwords do not match",
         networkError: "Network error",
         saveFailed: "Save failed",
+        authFailed: "Authentication failed",
         
         // Success messages
         noteSaved: "Note saved",
@@ -126,9 +150,9 @@ export const translations = {
         confirmDeleteNote: "Are you sure you want to delete this note?",
         archiveFailed: "Archive failed",
         unarchiveNote: "Unarchive note",
-        archiveNote: "Archive note",
         unarchive: "Unarchive",
         archive: "Archive",
+        deleteFailed: "Delete failed",
         
         // Service worker
         installApp: "Install this app",

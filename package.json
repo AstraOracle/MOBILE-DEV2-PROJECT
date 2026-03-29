@@ -20,6 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -39,5 +41,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/preset-create-react-app": "^8.6.18",
+    "@storybook/react": "^8.6.14",
+    "@storybook/react-webpack5": "^8.6.18",
+    "@storybook/test": "^8.6.18"
   }
 }

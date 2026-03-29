@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import useOnlineStatus from '../hooks/useOnlineStatus';
 import { NotesContext } from '../context/NotesContext';
+import { useI18n } from '../i18n/I18nProvider';
 
 /**
  * SyncStatus Component
@@ -18,6 +19,7 @@ import { NotesContext } from '../context/NotesContext';
 export default function SyncStatus() {
   const online = useOnlineStatus();
   const { queue, lastSync, syncStatus } = useContext(NotesContext);
+  const { t } = useI18n();
 
   const hasPendingActions = queue && queue.length > 0;
 
@@ -39,25 +41,25 @@ export default function SyncStatus() {
         aria-hidden="true"
       ></span>
       
-      <span>{online ? "Online" : "Offline"}</span>
+      <span>{online ? t('online') : t('offline')}</span>
       
       {syncStatus === 'syncing' && (
-        <span>Syncing...</span>
+        <span>{t('syncing')}</span>
       )}
       
       {syncStatus === 'error' && (
-        <span className="text-danger">Sync error</span>
+        <span className="text-danger">{t('syncError')}</span>
       )}
       
       {hasPendingActions && (
         <span title={`${queue.length} pending actions`}>
-          Queued: {queue.length}
+          {t('queued')}: {queue.length}
         </span>
       )}
       
       {lastSync && (
         <span title={new Date(lastSync).toLocaleString()}>
-          Last: {new Date(lastSync).toLocaleTimeString()}
+          {t('last')}: {new Date(lastSync).toLocaleTimeString()}
         </span>
       )}
     </div>

@@ -73,6 +73,11 @@ class ShareButton extends HTMLElement {
      * Tries Web Share API first, then Clipboard API, then manual copy
      */
     async handleShare(noteText, status) {
+        if (!noteText.trim()) {
+            this.showStatus(status, 'Nothing to share');
+            return;
+        }
+
         // First try the modern Web Share API
         if (navigator.share) {
             try {
@@ -157,8 +162,10 @@ class ShareButton extends HTMLElement {
     }
 }
 
-// Register the custom element
-customElements.define("share-button", ShareButton);
+// Register the custom element once so hot reload and Storybook don't throw.
+if (!customElements.get("share-button")) {
+    customElements.define("share-button", ShareButton);
+}
 
 // TODO: Add support for sharing URLs when we have note links
 // TODO: Maybe add a tooltip showing what sharing method is being used

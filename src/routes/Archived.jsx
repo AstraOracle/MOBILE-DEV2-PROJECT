@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import { NotesContext } from "../context/NotesContext";
 import NoteCard from "../components/NoteCard";
+import { useI18n } from "../i18n/I18nProvider";
 
 /**
  * Archived Component (Page)
@@ -17,6 +18,7 @@ import NoteCard from "../components/NoteCard";
 export default function Archived() {
     const ctx = useContext(NotesContext);
     const { state } = ctx;
+    const { t } = useI18n();
 
     // Filter archived notes
     const archivedNotes = state.notes.filter(note => note.archived);
@@ -24,17 +26,17 @@ export default function Archived() {
     return (
         <main id="main-content">
             <div className="container py-5">
-                <h1 className="display-5 mb-4">Archived Notes</h1>
+                <h1 className="display-5 mb-4">{t('archived')}</h1>
                 
                 <section className="mb-4">
                     <div className="d-flex gap-3 mb-3 flex-wrap">
                         <button 
                             className="btn btn-outline-primary"
                             onClick={() => ctx.shareAllNotes()}
-                            aria-label="Share All"
-                            title="Share All"
+                            aria-label={t('shareAll')}
+                            title={t('shareAll')}
                         >
-                            Share All
+                            {t('shareAll')}
                         </button>
                     </div>
                 </section>
@@ -42,8 +44,8 @@ export default function Archived() {
                 <section>
                     {archivedNotes.length === 0 ? (
                         <div className="text-center py-5">
-                            <h2 className="h5 mb-3">No archived notes</h2>
-                            <p className="text-muted">Archive notes from the Notes page to see them here.</p>
+                            <h2 className="h5 mb-3">{t('noArchivedNotes')}</h2>
+                            <p className="text-muted">{t('createAndArchiveNotes')}</p>
                         </div>
                     ) : (
                         <div className="row g-4">
