@@ -25,6 +25,41 @@ async function writeData(data) {
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function getUserFromAuthHeader(authHeader) {
+  if (!authHeader) return null;
+  const token = authHeader.replace('Bearer ', '');
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return null;
+  }
+}
+
+function getUserFromRequest(req) {
+  return getUserFromAuthHeader(req.headers?.authorization);
+}
+
+function canAccessNote(note, user) {
+  if (!note.userId) return true;
+  return !!user && note.userId === user.id;
+}
+
+function filterNotesForUser(notes, user) {
+  return notes.filter(note => canAccessNote(note, user));
+}
+
+function updateExistingNote(note, updates = {}) {
+  const nextText = typeof updates.text === 'string' ? updates.text : note.text;
+  const nextArchived = typeof updates.archived === 'boolean' ? updates.archived : note.archived;
+
+  return {
+    ...note,
+    text: nextText,
+    archived: nextArchived,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 const typeDefs = `
   type Note {
     id: Float!
@@ -58,6 +93,7 @@ const typeDefs = `
 
   type Mutation {
     addNote(input: NoteInput!): Note
+    updateNote(input: NoteInput!): Note
     deleteNote(id: Float!): Boolean
     sync(actions: [ActionInput!]!): [Note!]
     register(username: String!, password: String!): String
@@ -95,9 +131,21 @@ const resolvers = {
       await writeData(data);
       return note;
     },
+    updateNote: async (_, { input }, { user }) => {
+      const data = await readData();
+      const existing = data.notes.find(n => n.id === input.id);
+      if (!existing || !canAccessNote(existing, user)) {
+        throw new Error('Note not found');
+      }
+
+      const updated = updateExistingNote(existing, input);
+      data.notes = data.notes.map(n => (n.id === updated.id ? updated : n));
+      await writeData(data);
+      return updated;
+    },
     deleteNote: async (_, { id }, { user }) => {
       const data = await readData();
-      data.notes = data.notes.filter(n => n.id !== id || (n.userId && user && n.userId !== user.id));
+      data.notes = data.notes.filter(n => n.id !== id || !canAccessNote(n, user));
       await writeData(data);
       return true;
     },
@@ -119,17 +167,22 @@ const resolvers = {
           if (!notes.find(n => n.id === note.id)) notes.push(note);
         } else if (type === 'DELETE' && payload) {
           const id = payload;
-          notes = notes.filter(n => n.id !== id);
+          notes = notes.filter(n => n.id !== id || !canAccessNote(n, user));
         } else if (type === 'TOGGLE' && payload) {
           const id = payload;
-          notes = notes.map(n => n.id === id ? { ...n, archived: !n.archived, updatedAt: new Date().toISOString() } : n);
+          notes = notes.map(n => n.id === id && canAccessNote(n, user)
+            ? { ...n, archived: !n.archived, updatedAt: new Date().toISOString() }
+            : n);
+        } else if (type === 'UPDATE' && payload) {
+          notes = notes.map(n => n.id === payload.id && canAccessNote(n, user)
+            ? updateExistingNote(n, payload)
+            : n);
         }
       }
       data.notes = notes;
       await writeData(data);
       // return notes relevant to the user
-      if (user) return notes.filter(n => !n.userId || n.userId === user.id);
-      return notes.filter(n => !n.userId);
+      return filterNotesForUser(notes, user);
     },
     register: async (_, { username, password }) => {
       const data = await readData();
@@ -161,8 +214,77 @@ async function start() {
 
   // REST endpoints for convenience
   app.get('/api/notes', async (req, res) => {
+    const user = getUserFromRequest(req);
     const data = await readData();
-    res.json({ notes: data.notes });
+    res.json({ notes: filterNotesForUser(data.notes, user) });
+  });
+
+  app.post('/api/notes', async (req, res) => {
+    try {
+      const user = getUserFromRequest(req);
+      const data = await readData();
+      const now = new Date().toISOString();
+      const note = {
+        id: req.body?.id || Date.now(),
+        text: String(req.body?.text || '').trim(),
+        archived: !!req.body?.archived,
+        createdAt: now,
+        updatedAt: now,
+        userId: user ? user.id : null,
+      };
+
+      if (!note.text) {
+        return res.status(400).json({ error: 'Note text is required' });
+      }
+
+      if (!data.notes.find(n => n.id === note.id)) {
+        data.notes.push(note);
+        await writeData(data);
+      }
+
+      res.status(201).json({ note });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/notes/:id', async (req, res) => {
+    try {
+      const user = getUserFromRequest(req);
+      const id = Number(req.params.id);
+      const data = await readData();
+      const existing = data.notes.find(n => n.id === id);
+
+      if (!existing || !canAccessNote(existing, user)) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+
+      const note = updateExistingNote(existing, req.body);
+      data.notes = data.notes.map(n => (n.id === id ? note : n));
+      await writeData(data);
+      res.json({ note });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/notes/:id', async (req, res) => {
+    try {
+      const user = getUserFromRequest(req);
+      const id = Number(req.params.id);
+      const data = await readData();
+      const existing = data.notes.find(n => n.id === id);
+
+      if (!existing || !canAccessNote(existing, user)) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+
+      data.notes = data.notes.filter(n => n.id !== id);
+      await writeData(data);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post('/api/sync', async (req, res) => {
@@ -186,6 +308,13 @@ async function start() {
         case 'DELETE': {
           const id = action.payload;
           notes = notes.filter(n => n.id !== id);
+          break;
+        }
+        case 'UPDATE': {
+          const note = action.payload;
+          if (note?.id) {
+            notes = notes.map(n => n.id === note.id ? updateExistingNote(n, note) : n);
+          }
           break;
         }
         case 'TOGGLE': {
@@ -229,6 +358,14 @@ async function start() {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  app.get('/auth/me', async (req, res) => {
+    const user = getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    res.json({ user: { id: user.id, username: user.username } });
+  });
+
   // Apollo server
   const server = new ApolloServer({
     typeDefs,
@@ -239,15 +376,7 @@ async function start() {
   // expressMiddleware handles per-request context; we parse JSON body first
   app.use('/graphql', bodyParser.json(), expressMiddleware(server, {
     context: async ({ req }) => {
-      const auth = req.headers?.authorization;
-      if (!auth) return { user: null };
-      const token = auth.replace('Bearer ', '');
-      try {
-        const payload = jwt.verify(token, JWT_SECRET);
-        return { user: payload };
-      } catch (e) {
-        return { user: null };
-      }
+      return { user: getUserFromRequest(req) };
     }
   }));
 
