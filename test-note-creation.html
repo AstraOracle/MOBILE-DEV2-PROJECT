@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Creation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-step {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .test-step h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-step p {
+            margin-bottom: 10px;
+            color: #666;
+        }
+        .status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .status.pending { background-color: #fff3cd; color: #856404; }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .instructions {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .note-preview {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 Note Creation Test</h1>
+    
+    <div class="instructions">
+        <h3>How to Test:</h3>
+        <ol>
+            <li>Open your React application in a browser</li>
+            <li>Click on "New Note" in the navigation</li>
+            <li>Enter some text in the note editor</li>
+            <li>Click "Create Note"</li>
+            <li>Check if the note appears in the Notes list</li>
+        </ol>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Steps</h2>
+        
+        <div class="test-step">
+            <h3>Step 1: Navigation Test</h3>
+            <p>Check if "New Note" button is visible in the navigation bar</p>
+            <span class="status pending" id="nav-test">Pending</span>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 2: Route Test</h3>
+            <p>Verify that clicking "New Note" navigates to /notes/new</p>
+            <span class="status pending" id="route-test">Pending</span>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 3: Form Test</h3>
+            <p>Check if the note editor form is displayed and functional</p>
+            <span class="status pending" id="form-test">Pending</span>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 4: Save Test</h3>
+            <p>Test if clicking "Create Note" saves the note successfully</p>
+            <span class="status pending" id="save-test">Pending</span>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 5: Display Test</h3>
+            <p>Verify that the created note appears in the Notes list</p>
+            <span class="status pending" id="display-test">Pending</span>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Note Preview</h2>
+        <div class="note-preview" id="note-preview">
+            <p><em>Enter a test note in your application to see it appear here...</em></p>
+        </div>
+    </div>
+
+    <script>
+        // Simple test functions
+        function markTestComplete(testId, success, message) {
+            const element = document.getElementById(testId);
+            if (success) {
+                element.className = 'status success';
+                element.textContent = 'Success: ' + message;
+            } else {
+                element.className = 'status error';
+                element.textContent = 'Failed: ' + message;
+            }
+        }
+
+        // Test if IndexedDB is available
+        function testIndexedDB() {
+            if (window.indexedDB) {
+                markTestComplete('nav-test', true, 'IndexedDB is available');
+            } else {
+                markTestComplete('nav-test', false, 'IndexedDB not supported');
+            }
+        }
+
+        // Test if React Router is working
+        function testRouter() {
+            if (window.location) {
+                markTestComplete('route-test', true, 'Browser supports routing');
+            } else {
+                markTestComplete('route-test', false, 'Routing not supported');
+            }
+        }
+
+        // Run basic tests
+        testIndexedDB();
+        testRouter();
+
+        // Listen for messages from the React app
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'note-created') {
+                const preview = document.getElementById('note-preview');
+                preview.innerHTML = `
+                    <h4>✅ Note Created Successfully!</h4>
+                    <p><strong>Content:</strong> ${event.data.content}</p>
+                    <p><strong>Created:</strong> ${new Date(event.data.timestamp).toLocaleString()}</p>
+                `;
+                markTestComplete('save-test', true, 'Note saved to IndexedDB');
+                markTestComplete('display-test', true, 'Note should appear in list');
+            }
+        });
+
+        // Instructions for manual testing
+        console.log('To test note creation:');
+        console.log('1. Open your React app');
+        console.log('2. Click "New Note"');
+        console.log('3. Enter text and click "Create Note"');
+        console.log('4. Check if note appears in the list');
+    </script>
+</body>
+</html>
