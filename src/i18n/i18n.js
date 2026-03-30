@@ -41,7 +41,7 @@ export const translations = {
         note: "Note",
         noteNotFound: "Note not found",
         backToNotes: "Back to notes",
-        back: "Back",
+        back: "Cancel",
         
         // Status messages
         offlineMessage: "You are offline. Changes will persist locally.",

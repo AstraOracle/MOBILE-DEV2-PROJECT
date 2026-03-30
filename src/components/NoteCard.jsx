@@ -7,25 +7,7 @@ import "../web-components/share-button";
 import { truncateText, formatFriendlyDate, formatNoteTimestamp } from "../lib/formatters";
 import styles from "./NoteCard.module.css";
 
-/**
- * Render a single note preview card in a note list.
- *
- * Responsibilities:
- * - Display a preview of a note's text and timestamp
- * - Provide archive and delete actions for the note
- * - Expose sharing through the custom <share-button> web component
- *
- * @param {object} props Component props.
- * @param {object} props.note Note data to render.
- * @param {number} props.note.id Unique note identifier.
- * @param {string} props.note.text Full note text content.
- * @param {boolean} [props.note.archived] Whether the note is archived.
- * @param {string} [props.note.updatedAt] ISO timestamp of last update.
- * @param {string} [props.note.createdAt] ISO timestamp of creation.
- * @param {(noteId: number) => void | Promise<void>} [props.onDelete] Optional override for delete handling.
- * @param {string} [props.className] Optional extra class names for layout wrappers.
- * @returns {React.ReactElement} A reusable note card preview.
- */
+// Note preview card used in the notes list and archived list.
 export default function NoteCard({ note, onDelete, className = "" }) {
     const { updateNote, deleteNote: deleteNoteFromContext } = useContext(NotesContext);
     const { t } = useI18n();

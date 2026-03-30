@@ -17,7 +17,8 @@ export default function Home() {
     const [isSharing, setIsSharing] = useState(false);
 
     const showArchived = searchParams.get("archived") === "true";
-    const notes = state.notes.filter((note) => (showArchived ? true : !note.archived));
+    const isArchivedNote = (note) => note.archived === true || note.archived === "true";
+    const notes = state.notes.filter((note) => (showArchived ? isArchivedNote(note) : !isArchivedNote(note)));
 
     function toggleArchived() {
         if (showArchived) {
@@ -30,7 +31,7 @@ export default function Home() {
     }
 
     async function handleShareAll() {
-        const nonArchivedNotes = state.notes.filter((note) => !note.archived);
+        const nonArchivedNotes = state.notes.filter((note) => !isArchivedNote(note));
 
         if (nonArchivedNotes.length === 0) {
             alert(t("noNotesToShare"));

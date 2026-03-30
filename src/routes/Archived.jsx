@@ -3,25 +3,13 @@ import { NotesContext } from "../context/NotesContext";
 import NoteCard from "../components/NoteCard";
 import { useI18n } from "../i18n/I18nProvider";
 
-/**
- * Archived Component (Page)
- * 
- * Displays archived notes with unarchive functionality.
- * Shows notes where archived=true and provides unarchive buttons.
- * 
- * @component
- * @example
- * <Route path="/archived" element={<Archived />} />
- * 
- * @returns {React.ReactElement} The archived notes page
- */
+// Page that shows only archived notes.
 export default function Archived() {
     const ctx = useContext(NotesContext);
     const { state } = ctx;
     const { t } = useI18n();
 
-    // Filter archived notes
-    const archivedNotes = state.notes.filter(note => note.archived);
+    const archivedNotes = state.notes.filter((note) => note.archived === true || note.archived === "true");
 
     return (
         <main id="main-content">

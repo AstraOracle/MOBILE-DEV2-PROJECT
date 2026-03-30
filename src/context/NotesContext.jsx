@@ -1,5 +1,12 @@
-import React, { createContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useReducer, useEffect, useCallback, useContext } from 'react';
 import { getAllNotes, setNotes, getQueue, setQueue, clearQueue } from '../lib/idb';
+import { AuthContext } from './AuthContext';
+import {
+    createNoteRequest,
+    deleteNoteRequest,
+    fetchNotesRequest,
+    updateNoteRequest,
+} from '../lib/api';
 
 export const NotesContext = createContext();
 
@@ -39,31 +46,62 @@ function reducer(state, action) {
 
 export function NotesProvider({ children }) {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const { token } = useContext(AuthContext);
+
+    const persistNotesCache = useCallback(async (notes) => {
+        try {
+            await setNotes(notes);
+        } catch (error) {
+            console.warn('Unable to update local notes cache:', error);
+        }
+    }, []);
+
+    const persistQueueCache = useCallback(async (queue) => {
+        try {
+            await setQueue(queue);
+        } catch (error) {
+            console.warn('Unable to update local sync queue cache:', error);
+        }
+    }, []);
 
     const queueOfflineAction = useCallback(async (action) => {
+        const storedQueue = await getQueue();
         const nextQueue = [
-            ...state.queue,
+            ...storedQueue,
             {
                 ...action,
                 queuedAt: new Date().toISOString(),
             },
         ];
-        await setQueue(nextQueue);
+        await persistQueueCache(nextQueue);
         dispatch({ type: "SET_QUEUE", payload: nextQueue });
-    }, [state.queue]);
+    }, [persistQueueCache]);
 
-    // Load notes from IndexedDB
-    useEffect(() => {
-        const loadNotes = async () => {
-            try {
-                const notes = await getAllNotes();
-                dispatch({ type: "LOAD", payload: notes });
-            } catch (err) {
-                console.error('Failed to load notes:', err);
+    const loadNotes = useCallback(async () => {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine) {
+                const remoteNotes = await fetchNotesRequest(token);
+                await persistNotesCache(remoteNotes);
+                dispatch({ type: "LOAD", payload: remoteNotes });
+                dispatch({ type: "SET_LAST_SYNC", payload: new Date().toISOString() });
+                dispatch({ type: "SET_SYNC_STATUS", payload: 'idle' });
+                return;
             }
-        };
+        } catch (err) {
+            console.error('Failed to load notes from API, falling back to local cache:', err);
+        }
+
+        try {
+            const cachedNotes = await getAllNotes();
+            dispatch({ type: "LOAD", payload: cachedNotes });
+        } catch (err) {
+            console.error('Failed to load notes:', err);
+        }
+    }, [persistNotesCache, token]);
+
+    useEffect(() => {
         loadNotes();
-    }, []);
+    }, [loadNotes]);
 
     // Save notes to IndexedDB
     useEffect(() => {
@@ -71,7 +109,7 @@ export function NotesProvider({ children }) {
             try {
                 await setNotes(state.notes);
             } catch (err) {
-                console.error('Failed to save notes:', err);
+                console.warn('Failed to save notes:', err);
             }
         };
         saveNotes();
@@ -96,45 +134,50 @@ export function NotesProvider({ children }) {
             try {
                 await setQueue(state.queue);
             } catch (err) {
-                console.error('Failed to save queue:', err);
+                console.warn('Failed to save queue:', err);
             }
         };
         saveQueue();
     }, [state.queue]);
 
-    // Sync functionality
     const syncNotes = useCallback(async () => {
-        dispatch({ type: "SET_SYNC_STATUS", payload: 'syncing' });
-        
-        try {
-            // Get pending actions from queue
-            const queue = await getQueue();
-            
-            if (queue.length === 0) {
-                dispatch({ type: "SET_SYNC_STATUS", payload: 'idle' });
-                return;
-            }
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return;
+        }
 
-            // Simulate processing queued offline actions.
+        dispatch({ type: "SET_SYNC_STATUS", payload: 'syncing' });
+
+        try {
+            const queue = await getQueue();
+
             for (const item of queue) {
-                try {
-                    console.log('Syncing item:', item);
-                } catch (err) {
-                    console.error('Sync failed for item:', item, err);
+                switch (item.type) {
+                    case 'ADD':
+                        await createNoteRequest(item.payload, token);
+                        break;
+                    case 'UPDATE':
+                        await updateNoteRequest(item.payload.id, item.payload, token);
+                        break;
+                    case 'DELETE':
+                        await deleteNoteRequest(item.payload.id, token);
+                        break;
+                    default:
+                        break;
                 }
             }
 
-            // Clear queue after successful sync
             await clearQueue();
             dispatch({ type: "SET_QUEUE", payload: [] });
+            const remoteNotes = await fetchNotesRequest(token);
+            await persistNotesCache(remoteNotes);
+            dispatch({ type: "LOAD", payload: remoteNotes });
             dispatch({ type: "SET_LAST_SYNC", payload: new Date().toISOString() });
             dispatch({ type: "SET_SYNC_STATUS", payload: 'idle' });
-
         } catch (err) {
             console.error('Sync failed:', err);
             dispatch({ type: "SET_SYNC_STATUS", payload: 'error' });
         }
-    }, []);
+    }, [persistNotesCache, token]);
 
     useEffect(() => {
         const handleOnline = () => {
@@ -147,84 +190,99 @@ export function NotesProvider({ children }) {
         return () => window.removeEventListener('online', handleOnline);
     }, [syncNotes]);
 
-    // Add new note with timestamp
     const addNote = useCallback(async (noteText) => {
-        console.log('addNote called with:', noteText);
         if (!noteText || !noteText.trim()) {
-            console.error('addNote: Empty note text provided');
             throw new Error('Note text cannot be empty');
         }
-        
+
         const newNote = {
             id: Date.now(),
             text: noteText.trim(),
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            archived: false,
         };
-        
+
         try {
-            console.log('Attempting to save note to IndexedDB:', newNote);
-            // Get current notes and add new note
-            const currentNotes = await getAllNotes();
-            const updatedNotes = [...currentNotes, newNote];
-            await setNotes(updatedNotes);
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                await queueOfflineAction({ type: 'ADD_NOTE', payload: newNote });
+            if (typeof navigator !== 'undefined' && navigator.onLine) {
+                const savedNote = await createNoteRequest(newNote, token);
+                const nextNotes = [...state.notes, savedNote];
+                await persistNotesCache(nextNotes);
+                dispatch({ type: "ADD", payload: savedNote });
+                dispatch({ type: "SET_LAST_SYNC", payload: new Date().toISOString() });
+                return savedNote;
             }
-            console.log('Note saved to IndexedDB successfully');
+
+            const updatedNotes = [...state.notes, newNote];
+            await setNotes(updatedNotes);
+            await queueOfflineAction({ type: 'ADD', payload: newNote });
             dispatch({ type: "ADD", payload: newNote });
-            console.log('Note added to state successfully');
+            return newNote;
         } catch (err) {
             console.error('Failed to add note:', err);
-            throw new Error('Unable to save note');
+            throw err instanceof Error ? err : new Error('Unable to save note');
         }
-    }, [queueOfflineAction]);
+    }, [persistNotesCache, queueOfflineAction, state.notes, token]);
 
-    // Update existing note with timestamp
     const updateNote = useCallback(async (id, updates) => {
-        // Find the note first
         const noteToUpdate = state.notes.find(n => n.id === id);
-        
+
         if (!noteToUpdate) {
             console.error('Note not found for update:', id);
             throw new Error('Note not found');
         }
-        
+
         const updatedNote = {
             ...noteToUpdate,
             ...updates,
             updatedAt: new Date().toISOString()
         };
-        
+
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine) {
+                const savedNote = await updateNoteRequest(id, updatedNote, token);
+                const nextNotes = state.notes.map(n => 
+                    n.id === id ? savedNote : n
+                );
+                await persistNotesCache(nextNotes);
+                dispatch({ type: "UPDATE", payload: savedNote });
+                dispatch({ type: "SET_LAST_SYNC", payload: new Date().toISOString() });
+                return savedNote;
+            }
+
             const updatedNotes = state.notes.map(n => 
                 n.id === id ? updatedNote : n
             );
             await setNotes(updatedNotes);
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                await queueOfflineAction({ type: 'UPDATE_NOTE', payload: updatedNote });
-            }
+            await queueOfflineAction({ type: 'UPDATE', payload: updatedNote });
             dispatch({ type: "UPDATE", payload: updatedNote });
+            return updatedNote;
         } catch (err) {
             console.error('Failed to update note:', err);
-            throw new Error('Unable to save note changes');
+            throw err instanceof Error ? err : new Error('Unable to save note changes');
         }
-    }, [state.notes, queueOfflineAction]);
+    }, [persistNotesCache, state.notes, queueOfflineAction, token]);
 
-    // Delete note
     const deleteNote = useCallback(async (id) => {
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine) {
+                await deleteNoteRequest(id, token);
+                const updatedNotes = state.notes.filter(n => n.id !== id);
+                await persistNotesCache(updatedNotes);
+                dispatch({ type: "DELETE", payload: id });
+                dispatch({ type: "SET_LAST_SYNC", payload: new Date().toISOString() });
+                return;
+            }
+
             const updatedNotes = state.notes.filter(n => n.id !== id);
             await setNotes(updatedNotes);
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                await queueOfflineAction({ type: 'DELETE_NOTE', payload: { id } });
-            }
+            await queueOfflineAction({ type: 'DELETE', payload: { id } });
             dispatch({ type: "DELETE", payload: id });
         } catch (err) {
             console.error('Failed to delete note:', err);
-            throw new Error('Unable to delete note');
+            throw err instanceof Error ? err : new Error('Unable to delete note');
         }
-    }, [state.notes, queueOfflineAction]);
+    }, [persistNotesCache, state.notes, queueOfflineAction, token]);
 
     // Fallback sharing method using clipboard API
     const fallbackShare = useCallback(async (text) => {
@@ -233,16 +291,13 @@ export function NotesProvider({ children }) {
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(text);
-                console.log('Text copied to clipboard');
             } else {
-                // Last resort: manual copy via textarea
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                console.log('Text copied to clipboard (fallback method)');
             }
         } catch (error) {
             console.error('Clipboard copy failed:', error);
@@ -269,11 +324,8 @@ export function NotesProvider({ children }) {
 
         if (navigator.share) {
             try {
-                navigator.share(shareData).then(() => {
-                    console.log('Note shared successfully');
-                }).catch((error) => {
+                navigator.share(shareData).catch((error) => {
                     console.error('Share failed:', error);
-                    // Fallback to clipboard if share fails
                     fallbackShare(noteText);
                 });
             } catch (error) {
@@ -311,9 +363,7 @@ export function NotesProvider({ children }) {
 
         if (navigator.share) {
             try {
-                navigator.share(shareData).then(() => {
-                    console.log('All notes shared successfully');
-                }).catch((error) => {
+                navigator.share(shareData).catch((error) => {
                     console.error('Share failed:', error);
                     fallbackShare(allText);
                 });
@@ -326,37 +376,9 @@ export function NotesProvider({ children }) {
         }
     }, [state.notes, fallbackShare]);
 
-    /**
-     * Archive a note by setting its archived property to true
-     */
     const archiveNote = useCallback(async (id) => {
-        const noteToArchive = state.notes.find(n => n.id === id);
-        
-        if (!noteToArchive) {
-            console.error('Note not found for archiving:', id);
-            throw new Error('Note not found');
-        }
-        
-        const updatedNote = {
-            ...noteToArchive,
-            archived: true,
-            updatedAt: new Date().toISOString()
-        };
-        
-        try {
-            const updatedNotes = state.notes.map(n => 
-                n.id === id ? updatedNote : n
-            );
-            await setNotes(updatedNotes);
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                await queueOfflineAction({ type: 'ARCHIVE_NOTE', payload: updatedNote });
-            }
-            dispatch({ type: "UPDATE", payload: updatedNote });
-        } catch (err) {
-            console.error('Failed to archive note:', err);
-            throw new Error('Unable to archive note');
-        }
-    }, [state.notes, queueOfflineAction]);
+        return updateNote(id, { archived: true });
+    }, [updateNote]);
 
     return (
         <NotesContext.Provider value={{ 

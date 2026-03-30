@@ -5,19 +5,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { formatNoteTimestamp } from '../lib/formatters';
 import styles from './NoteDetail.module.css';
 
-/**
- * NoteDetail Component
- * 
- * Professional note editing interface with mobile-first design.
- * Features large textarea optimized for mobile devices, timestamp tracking,
- * and native sharing integration.
- * 
- * @component
- * @example
- * <NoteDetail />
- * 
- * @returns {React.ReactElement} Enhanced note editing interface
- */
+// Page for creating and editing notes.
 export default function NoteDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -28,11 +16,9 @@ export default function NoteDetail() {
     const [noteText, setNoteText] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    
-    // Get current note from context
-    const currentNote = isNew ? null : state.notes.find(n => n.id === parseInt(id));
 
-    // Load note text when editing existing note
+    const currentNote = isNew ? null : state.notes.find((note) => note.id === parseInt(id, 10));
+
     useEffect(() => {
         if (!isNew && currentNote) {
             setNoteText(currentNote.text);
@@ -43,9 +29,6 @@ export default function NoteDetail() {
         }
     }, [isNew, currentNote, id, navigate]);
 
-    /**
-     * Handle note saving with proper error handling
-     */
     const handleSave = async () => {
         if (!noteText.trim()) {
             alert(t('pleaseEnterNoteText'));
@@ -53,33 +36,29 @@ export default function NoteDetail() {
         }
 
         setIsSaving(true);
-        
+
         try {
             if (isNew) {
                 await addNote(noteText);
-                // Navigate to the notes list
                 navigate('/notes');
             } else {
-                // Check if currentNote exists before trying to update
                 if (!currentNote) {
                     alert(t('noteNotFound'));
                     navigate('/notes');
                     return;
                 }
+
                 await updateNote(currentNote.id, { text: noteText });
                 navigate('/notes');
             }
         } catch (error) {
             console.error('Save failed:', error);
-            alert(t('saveFailed'));
+            alert(error?.message || t('saveFailed'));
         } finally {
             setIsSaving(false);
         }
     };
 
-    /**
-     * Handle note deletion with confirmation
-     */
     const handleDelete = async () => {
         if (!isNew && currentNote) {
             const confirmed = window.confirm(t('confirmDeleteNote'));
@@ -98,26 +77,23 @@ export default function NoteDetail() {
         }
     };
 
-    /**
-     * Handle note sharing with enhanced error handling
-     */
     const handleShare = () => {
         const textToShare = noteText.trim();
-        
+
         if (!textToShare) {
             alert(t('cannotShareEmptyNote'));
             return;
         }
 
-        const noteToShare = isNew 
-            ? { 
-                id: Date.now(),
-                text: textToShare,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+        const noteToShare = isNew
+            ? {
+                  id: Date.now(),
+                  text: textToShare,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
               }
             : { ...currentNote, text: textToShare };
-        
+
         try {
             shareNote(noteToShare);
         } catch (error) {
@@ -126,9 +102,6 @@ export default function NoteDetail() {
         }
     };
 
-    /**
-     * Handle cancel action
-     */
     const handleCancel = () => {
         if (!isNew && currentNote && noteText !== currentNote.text) {
             const confirmed = window.confirm(t('discardChanges'));
@@ -140,9 +113,6 @@ export default function NoteDetail() {
         }
     };
 
-    /**
-     * Handle archive action
-     */
     const handleArchive = async () => {
         if (!isNew && currentNote) {
             try {
@@ -157,16 +127,15 @@ export default function NoteDetail() {
 
     return (
         <div className={styles.noteDetailContainer}>
-            {/* Header with navigation */}
             <header className={styles.noteDetailHeader}>
-                <button 
+                <button
                     className={styles.btnCancel}
                     onClick={handleCancel}
                     aria-label={t('cancel')}
                 >
-                    ← {t('back')}
+                    {t('cancel')}
                 </button>
-                
+
                 <div className={styles.headerActions}>
                     {!isNew && currentNote && (
                         <span className={styles.noteTimestamp} title={formatNoteTimestamp(currentNote)}>
@@ -176,13 +145,12 @@ export default function NoteDetail() {
                 </div>
             </header>
 
-            {/* Main content area */}
             <main className={styles.noteDetailMain}>
                 <div className={styles.noteEditorContainer}>
                     <label htmlFor="note-textarea" className="visually-hidden">
                         {isNew ? t('newNote') : t('editNote')}
                     </label>
-                    
+
                     <textarea
                         id="note-textarea"
                         className={styles.noteTextarea}
@@ -194,10 +162,8 @@ export default function NoteDetail() {
                 </div>
             </main>
 
-            {/* Floating action buttons for mobile */}
             <div className={styles.noteActions}>
                 <div className={styles.actionButtons}>
-                    {/* Share Button */}
                     <button
                         className={styles.actionBtn}
                         onClick={handleShare}
@@ -208,7 +174,6 @@ export default function NoteDetail() {
                         📤
                     </button>
 
-                    {/* Archive Button */}
                     <button
                         className={styles.actionBtn}
                         onClick={handleArchive}
@@ -219,7 +184,6 @@ export default function NoteDetail() {
                         📦
                     </button>
 
-                    {/* Delete Button */}
                     {!isNew && (
                         <button
                             className={styles.actionBtn}
@@ -233,7 +197,6 @@ export default function NoteDetail() {
                     )}
                 </div>
 
-                {/* Save Button - Fixed at bottom for easy access */}
                 <div className={styles.saveContainer}>
                     <button
                         className={styles.saveBtn}

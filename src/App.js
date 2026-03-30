@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
 import { NotesProvider } from "./context/NotesContext";
 import { AuthProvider } from "./context/AuthContext";
 import Login from "./components/Login";
@@ -17,13 +17,13 @@ function App() {
   return (
     <ErrorBoundary>
       <I18nProvider>
-        <BrowserRouter>
+        <HashRouter>
           <AuthProvider>
             <NotesProvider>
               <AppContent />
             </NotesProvider>
           </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
       </I18nProvider>
     </ErrorBoundary>
   );

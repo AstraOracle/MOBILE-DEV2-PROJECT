@@ -1,44 +1,36 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { setKV, removeKV } from '../lib/idb';
+import { getCurrentUser, getAuthHeaders, loginRequest, registerRequest } from '../lib/api';
 
 export const AuthContext = createContext();
 
 const TOKEN_KEY = 'duly-noted:token';
 
+function decodeToken(token) {
+  if (!token) return null;
+
+  try {
+    if (!token.includes('.')) {
+      return JSON.parse(atob(token));
+    }
+
+    const [, payload] = token.split('.');
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+    return JSON.parse(atob(padded));
+  } catch (error) {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    if (token) {
-      try {
-        // Handle both JWT format (header.payload.signature) and simple base64 format
-        if (token.includes('.')) {
-          // JWT format
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            setUser({ id: payload.id, username: payload.username });
-          }
-        } else {
-          // Simple base64 format
-          const payload = JSON.parse(atob(token));
-          setUser({ id: payload.id, username: payload.username });
-        }
-      } catch (e) { 
-        console.warn('Token decode failed:', e);
-        setUser(null); 
-      }
-    } else {
-      setUser(null);
-    }
-  }, [token]);
+  const [user, setUser] = useState(() => decodeToken(localStorage.getItem(TOKEN_KEY)));
 
   const saveToken = useCallback((t) => {
     if (t) {
       localStorage.setItem(TOKEN_KEY, t);
       setToken(t);
-      // also persist to IndexedDB so service worker can access it
       try { setKV('token', t).catch(() => {}); } catch (e) {}
     } else {
       localStorage.removeItem(TOKEN_KEY);
@@ -47,49 +39,56 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (username, password) => {
-    // Client-side authentication without backend
-    const users = JSON.parse(localStorage.getItem('duly-noted:users') || '[]');
-    const user = users.find(u => u.username === username);
-    
-    if (!user || user.password !== password) {
-      throw new Error('Invalid credentials');
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      return undefined;
     }
-    
-    // Create a simple JWT-like token
-    const token = btoa(JSON.stringify({ id: user.id, username: user.username }));
-    saveToken(token);
-    return token;
+
+    let cancelled = false;
+    const decodedUser = decodeToken(token);
+    if (decodedUser) {
+      setUser({ id: decodedUser.id, username: decodedUser.username });
+    }
+
+    getCurrentUser(token)
+      .then((nextUser) => {
+        if (!cancelled) {
+          setUser(nextUser);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !decodedUser) {
+          setUser(null);
+          saveToken(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [saveToken, token]);
+
+  const login = async (username, password) => {
+    const nextToken = await loginRequest(username, password);
+    saveToken(nextToken);
+    return nextToken;
   };
 
   const register = async (username, password) => {
-    // Client-side registration without backend
     if (!username || !password) {
       throw new Error('Username and password required');
     }
-    
-    const users = JSON.parse(localStorage.getItem('duly-noted:users') || '[]');
-    const existing = users.find(u => u.username === username);
-    
-    if (existing) {
-      throw new Error('User already exists');
-    }
-    
-    // Add new user
-    const userId = String(Date.now());
-    users.push({ id: userId, username, password });
-    localStorage.setItem('duly-noted:users', JSON.stringify(users));
-    
-    // Create a simple JWT-like token
-    const token = btoa(JSON.stringify({ id: userId, username }));
-    saveToken(token);
-    return token;
+
+    const nextToken = await registerRequest(username, password);
+    saveToken(nextToken);
+    return nextToken;
   };
 
   const logout = () => saveToken(null);
 
   const authHeaders = () => {
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return getAuthHeaders(token);
   };
 
   return (
